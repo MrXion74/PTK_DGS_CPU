@@ -331,7 +331,7 @@ void testHART() {
     digitalWrite(HART_RTS_PIN, HIGH);
 
     startDelay = millis();
-    while (millis() - startDelay < 500) {
+    while (millis() - startDelay < 50) {
         handleYellowBlink();
     }
 
