@@ -62,12 +62,12 @@ Adafruit_ADS1115 ads2;
 HardwareSerial rs485(1);
 HardwareSerial hartSerial(2);
 
-int readings3V3[5];
-int readings5V[5];
-int readings26V[5];
-int readingsSPWR[5];
-int readingsVCC[5];
-int readingsLoopCurrent[5];
+int16_t readings3V3[5];
+int16_t readings5V[5];
+int16_t readings26V[5];
+int16_t readingsSPWR[5];
+int16_t readingsVCC[5];
+int16_t readingsLoopCurrent[5];
 
 enum SystemState { 
     STATE_POWER_OFF,      // Питание выключено (белый светодиод)
@@ -351,78 +351,112 @@ void testHART() {
     }
 }
 
+//*Обработка измерений
+float processChannel(Adafruit_ADS1115 &ads, int16_t *readings, int count, float multiplier, float lower, float upper, int errorIndex) {
+    int valid[5];
+    int validCount = 0;
+
+    // Фильтрация допустимых значений ADC
+    for (int i = 0; i < count; i++) {
+        int16_t value = readings[i];
+        if (value >= 0 && value <= 32767) {
+            valid[validCount++] = value;
+        }
+    }
+
+    if (validCount == 0) {
+        Serial.printf("Ошибка: все измерения для канала %d недопустимы\n", errorIndex);
+        errors[errorIndex] = true;
+        return 0.0;
+    }
+
+    // Усреднение
+    int sum = 0;
+    for (int i = 0; i < validCount; i++) {
+        sum += valid[i];
+    }
+    float average = sum / (float)validCount;
+
+    // Преобразование в напряжение
+    float voltage = ads.computeVolts(average) * multiplier;
+
+    // Проверка диапазона
+    if (voltage < lower || voltage > upper) {
+        errors[errorIndex] = true;
+    }
+
+    return voltage;
+}
+
 //* Тесты узлов питания
 void testVoltagesAndCurrents() {
     Serial.println("Запуск теста узлов питания...");
     handleYellowBlink();
     
-    int16_t adc10, adc11, adc13, adc20, adc21, adc22;
-
-    adc10 = ads1.readADC_SingleEnded(0); // ADC_3.3V
-    
-    unsigned long startDelay = millis();
-    while (millis() - startDelay < 500) {
-        handleYellowBlink();
-    }
-
-    adc11 = ads1.readADC_SingleEnded(1); // ADC_5V
-    
-    startDelay = millis();
-    while (millis() - startDelay < 500) {
-        handleYellowBlink();
-    }
-
-    adc13 = ads1.readADC_SingleEnded(3); // ADC_26V
-    
-    startDelay = millis();
-    while (millis() - startDelay < 500) {
-        handleYellowBlink();
-    }
-    
-    adc20 = ads2.readADC_SingleEnded(0); // SPWR voltage
-    
-    startDelay = millis();
-    while (millis() - startDelay < 500) {
-        handleYellowBlink();
-    }
-    
-    adc21 = ads2.readADC_SingleEnded(1); // loopCurrent
-    
-    startDelay = millis();
-    while (millis() - startDelay < 500) {
-        handleYellowBlink();
-    }
-
-    adc22 = ads2.readADC_SingleEnded(2); // VCC current
-    
-    startDelay = millis();
-    while (millis() - startDelay < 500) {
-        handleYellowBlink();
-    }
-
-    /*
+    // Сбор данных для каждого канала
+    // 3.3V (ADS1, канал 0)
     for (int i = 0; i < 5; i++) {
-        adc10 = ads1.readADC_SingleEnded(0); // ADC_3.3V
-        delay(50);
-        readings3V3[i] = adc10;
+        readings3V3[i] = ads1.readADC_SingleEnded(0);
+        unsigned long startDelay = millis();
+        while (millis() - startDelay < 50) {
+            handleYellowBlink();
+        }
     }
 
-    int valid3v3[5];
-    int validIndex3v3 = 0;
+    // 5V (ADS1, канал 1)
     for (int i = 0; i < 5; i++) {
-        int currentValue3V3 = readings3V3[i];
-        if (currentValue3V3 >= 0 && currentValue3V3 <=);
+        readings5V[i] = ads1.readADC_SingleEnded(1);
+        unsigned long startDelay = millis();
+        while (millis() - startDelay < 50) {
+            handleYellowBlink();
+        }
     }
-    */
 
-    float voltage3V3 = (ads1.computeVolts(adc10) / 5100 * 15100);
-    float voltage5V = (ads1.computeVolts(adc11) / 5100 * 15100);
-    float voltage26V = (ads1.computeVolts(adc13) / 5100 * 105100);
-    float spwrVoltage = (ads2.computeVolts(adc20) / 5100 * 15100);
-    float loopCurrentVoltage = (ads2.computeVolts(adc21) * 10.0);
-    float vccCurrent = (ads2.computeVolts(adc22) * 50.0);
+    // 26V (ADS1, канал 3)
+    for (int i = 0; i < 5; i++) {
+        readings26V[i] = ads1.readADC_SingleEnded(3);
+        unsigned long startDelay = millis();
+        while (millis() - startDelay < 50) {
+            handleYellowBlink();
+        }
+    }
+
+    // SPWR (ADS2, канал 0)
+    for (int i = 0; i < 5; i++) {
+        readingsSPWR[i] = ads2.readADC_SingleEnded(0);
+        unsigned long startDelay = millis();
+        while (millis() - startDelay < 50) {
+            handleYellowBlink();
+        }
+    }
+
+    // loopCurrent (ADS2, канал 1)
+    for (int i = 0; i < 5; i++) {
+        readingsLoopCurrent[i] = ads2.readADC_SingleEnded(1);
+        unsigned long startDelay = millis();
+        while (millis() - startDelay < 50) {
+            handleYellowBlink();
+        }
+    }
+
+    // VCC current (ADS2, канал 2)
+    for (int i = 0; i < 5; i++) {
+        readingsVCC[i] = ads2.readADC_SingleEnded(2);
+        unsigned long startDelay = millis();
+        while (millis() - startDelay < 50) {
+            handleYellowBlink();
+        }
+    }
+
+    // Обработка каждого канала
+    float voltage3V3 = processChannel(ads1, readings3V3, 5, (15100.0/5100.0), VOLTAGE_3V3_LOWER, VOLTAGE_3V3_UPPER, 3);
+    float voltage5V = processChannel(ads1, readings5V, 5, (15100.0/5100.0), VOLTAGE_5V_LOWER, VOLTAGE_5V_UPPER, 4);
+    float voltage26V = processChannel(ads1, readings26V, 5, (105100.0/5100.0), VOLTAGE_26V_LOWER, VOLTAGE_26V_UPPER, 5);
+    float spwrVoltage = processChannel(ads2, readingsSPWR, 5, (15100.0/5100.0), SPWR_LOWER, SPWR_UPPER, 6);
+    float loopCurrentVoltage = processChannel(ads2, readingsLoopCurrent, 5, 10.0, LOOP_CURRENT_VOLTAGE_LOWER, LOOP_CURRENT_VOLTAGE_UPPER, 8);
+    float vccCurrent = processChannel(ads2, readingsVCC, 5, 50.0, VCC_CURRENT_LOWER, VCC_CURRENT_UPPER, 7);
     
-
+    //Вывод результатов
     Serial.printf("VCC Current: %.2f mA\n", vccCurrent);
     Serial.printf("4-20mA Line Voltage: %.2f mA\n", loopCurrentVoltage);
     Serial.printf("SPWR Voltage: %.2f V\n", spwrVoltage);
