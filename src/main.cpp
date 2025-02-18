@@ -84,6 +84,10 @@ bool blinkStateY = false; //Состояние желтого светодиод
 bool blinkStateW = false; //Состояние белого светодиода
 int currentErrorIndex = -1;
 
+unsigned int shortBlink = 200; // Продолжительность короткого моргания
+unsigned int longBlink = 600; // Продолжительность длинного моргания
+unsigned int pauseBlink = 200; // Продолжительность паузы
+
 // Флаги ошибок (true - ошибка)
 bool errors[] = {
     false, false, false, // RS485, STxRX, HART
@@ -594,97 +598,223 @@ void showErrors() {
     static unsigned long lastTransitionTime = 0;
     static bool showingError = true;
 
+    unsigned long startDelay = millis();
+
     if (showingError) {
         switch (currentErrorIndex) {
-            case 0: // RS485
+            case 0: //* RS485
                 digitalWrite(LED_RED, HIGH);
-                delay(300);
+                
+                while (millis() - startDelay < longBlink) {
+                }
                 digitalWrite(LED_RED, LOW);
-                delay(1000);
+
+                while (millis() - startDelay < pauseBlink) {
+                }
+
+                digitalWrite(LED_RED, HIGH);
+                while (millis() - startDelay < shortBlink) {
+                }
+                digitalWrite(LED_RED, LOW);
+
+                while (millis() - startDelay < pauseBlink) {
+                }
+
+                digitalWrite(LED_RED, HIGH);
+                while (millis() - startDelay < longBlink) {
+                }
+                digitalWrite(LED_RED, LOW);
+
+                while (millis() - startDelay < pauseBlink) {
+                }
+
+                digitalWrite(LED_RED, HIGH);
+                while (millis() - startDelay < shortBlink) {
+                }
+                digitalWrite(LED_RED, LOW);
+
+                while (millis() - startDelay < pauseBlink) {
+                }
+
+                digitalWrite(LED_RED, HIGH);
+                while (millis() - startDelay < longBlink) {
+                }
+                digitalWrite(LED_RED, LOW);
+
+                while (millis() - startDelay < pauseBlink) {
+                }
+               
                 break;
-            case 1: // STxRX
+            case 1: //* STxRX
+                for (int i = 0; i < 3; i++) {
+                    digitalWrite(LED_RED, HIGH);
+                    while (millis() - startDelay < shortBlink) {
+                    }
+                    digitalWrite(LED_RED, LOW);
+                    while (millis() - startDelay < pauseBlink) {
+                    }
+                }
+
                 for (int i = 0; i < 2; i++) {
                     digitalWrite(LED_RED, HIGH);
-                    delay(300);
+                    while (millis() - startDelay < longBlink) {
+                    }
                     digitalWrite(LED_RED, LOW);
-                    delay(300);
+                    while (millis() - startDelay < pauseBlink) {
+                    }
                 }
-                delay(1000);
+
                 break;
-            case 2: // HART
+            case 2: //* HART
                 digitalWrite(LED_RED, HIGH);
-                delay(600);
+                
+                while (millis() - startDelay < longBlink) {
+                }
+
                 digitalWrite(LED_RED, LOW);
-                delay(600);
+                while (millis() - startDelay < pauseBlink) {
+                }
+
+                for (int i = 0; i < 3; i++) {
+                    digitalWrite(LED_RED, HIGH);
+                    while (millis() - startDelay < shortBlink) {
+                    }
+                    digitalWrite(LED_RED, LOW);
+                    while (millis() - startDelay < pauseBlink) {
+                    }
+                }
+
                 digitalWrite(LED_RED, HIGH);
-                delay(600);
+                
+                while (millis() - startDelay < longBlink) {
+                }
+
                 digitalWrite(LED_RED, LOW);
-                delay(600);
+                while (millis() - startDelay < pauseBlink) {
+                }
+
                 break;
-            case 3: // 3V3
+            case 3: //* 3V3
                 for (int i = 0; i < 2; i++) {
                     digitalWrite(LED_RED, HIGH);
-                    delay(600);
+                    while (millis() - startDelay < shortBlink) {
+                    }
                     digitalWrite(LED_RED, LOW);
-                    delay(300);
+                    while (millis() - startDelay < pauseBlink) {
+                    }
                 }
-                break;
-            case 4: // 5V
-                digitalWrite(LED_BLUE, HIGH);
-                digitalWrite(LED_RED, HIGH);
-                delay(300);
-                digitalWrite(LED_BLUE, LOW);
-                digitalWrite(LED_RED, LOW);
-                delay(1000);
-                digitalWrite(LED_BLUE, HIGH);
-                digitalWrite(LED_RED, HIGH);
-                delay(300);
-                digitalWrite(LED_BLUE, LOW);
-                digitalWrite(LED_RED, LOW);
-                delay(1000);
-                break;
-            case 5: // 26V
-                for (int i = 0; i < 2; i++) {
-                    digitalWrite(LED_BLUE, HIGH);
+
+                for (int i = 0; i < 3; i++) {
                     digitalWrite(LED_RED, HIGH);
-                    delay(300);
-                    digitalWrite(LED_BLUE, LOW);
+                    while (millis() - startDelay < longBlink) {
+                    }
                     digitalWrite(LED_RED, LOW);
-                    delay(300);
+                    while (millis() - startDelay < pauseBlink) {
+                    }
                 }
-                delay(1000);
+
                 break;
-            case 6: // SPWR
-                digitalWrite(LED_BLUE, HIGH);
-                digitalWrite(LED_RED, HIGH);
-                delay(600);
-                digitalWrite(LED_BLUE, LOW);
-                digitalWrite(LED_RED, LOW);
-                delay(600);
-                break;
-            case 7: // VCC
-                for (int i = 0; i < 2; i++) {
-                    digitalWrite(LED_BLUE, HIGH);
+            case 4: //* 5V
+                for (int i = 0; i < 3; i++) {
                     digitalWrite(LED_RED, HIGH);
-                    delay(600);
-                    digitalWrite(LED_BLUE, LOW);
+                    while (millis() - startDelay < longBlink) {
+                    }
                     digitalWrite(LED_RED, LOW);
-                    delay(300);
+                    while (millis() - startDelay < pauseBlink) {
+                    }
+                }
+
+                for (int i = 0; i < 2; i++) {
+                    digitalWrite(LED_RED, HIGH);
+                    while (millis() - startDelay < shortBlink) {
+                    }
+                    digitalWrite(LED_RED, LOW);
+                    while (millis() - startDelay < pauseBlink) {
+                    }
+                }
+
+                break;
+            case 5: //* 26V
+                digitalWrite(LED_RED, HIGH);
+                while (millis() - startDelay < shortBlink) {
+                }
+                digitalWrite(LED_RED, LOW);
+                while (millis() - startDelay < pauseBlink) {
+                }
+
+                for (int i = 0; i < 3; i++) {
+                    digitalWrite(LED_RED, HIGH);
+                    while (millis() - startDelay < longBlink) {
+                    }
+                    digitalWrite(LED_RED, LOW);
+                    while (millis() - startDelay < pauseBlink) {
+                    }
+                }
+
+                digitalWrite(LED_RED, HIGH);
+                while (millis() - startDelay < shortBlink) {
+                }
+                digitalWrite(LED_RED, LOW);
+                while (millis() - startDelay < pauseBlink) {
+                }
+
+                break;
+            case 6: //* SPWR
+                for (int i = 0; i < 5; i++) {
+                    digitalWrite(LED_RED, HIGH);
+                    while (millis() - startDelay < longBlink) {
+                    }
+                    digitalWrite(LED_RED, LOW);
+                    while (millis() - startDelay < pauseBlink) {
+                    }
+                }
+
+                break;
+            case 7: //* VCC
+                for (int i = 0; i < 5; i++) {
+                    digitalWrite(LED_RED, HIGH);
+                    while (millis() - startDelay < shortBlink) {
+                    }
+                    digitalWrite(LED_RED, LOW);
+                    while (millis() - startDelay < pauseBlink) {
+                    }
                 }
                 break;
-            case 8: // loopCurrent
-                digitalWrite(LED_BLUE, HIGH);
+            case 8: //* loopCurrent
                 digitalWrite(LED_RED, HIGH);
-                delay(300);
-                digitalWrite(LED_BLUE, LOW);
+                while (millis() - startDelay < shortBlink) {
+                }
                 digitalWrite(LED_RED, LOW);
-                delay(300);
-                digitalWrite(LED_BLUE, HIGH);
+                while (millis() - startDelay < pauseBlink) {
+                }
+
                 digitalWrite(LED_RED, HIGH);
-                delay(600);
-                digitalWrite(LED_BLUE, LOW);
+                while (millis() - startDelay < longBlink) {
+                }
                 digitalWrite(LED_RED, LOW);
-                delay(1000);
+                while (millis() - startDelay < pauseBlink) {
+                }
+
+                digitalWrite(LED_RED, HIGH);
+                while (millis() - startDelay < shortBlink) {
+                }
+                digitalWrite(LED_RED, LOW);
+                while (millis() - startDelay < pauseBlink) {
+                }
+
+                digitalWrite(LED_RED, HIGH);
+                while (millis() - startDelay < longBlink) {
+                }
+                digitalWrite(LED_RED, LOW);
+                while (millis() - startDelay < pauseBlink) {
+                }
+
+                digitalWrite(LED_RED, HIGH);
+                while (millis() - startDelay < shortBlink) {
+                }
+                digitalWrite(LED_RED, LOW);
+                while (millis() - startDelay < pauseBlink) {
+                }
         }
 
         do {
