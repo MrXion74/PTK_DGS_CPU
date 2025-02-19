@@ -774,6 +774,7 @@ void showErrors() {
         showingError = false;
     } else {
         // Бирюзовый переход
+        delay(500);
         digitalWrite(LED_GREEN, HIGH);
         digitalWrite(LED_BLUE, HIGH);
         delay(1000);
