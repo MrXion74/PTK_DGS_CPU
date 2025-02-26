@@ -120,7 +120,7 @@ void setup() {
     digitalWrite(LED_GREEN, LOW);
     digitalWrite(LED_BLUE, LOW);
     digitalWrite(RS485_DIR_PIN, LOW);
-    digitalWrite(GPIO_RESET1, LOW);
+    digitalWrite(GPIO_RESET1, HIGH);
     digitalWrite(GPIO_RESET2, LOW);
 
     Wire.begin(SDA_PIN, SCL_PIN);
@@ -205,7 +205,7 @@ void resetCPU() {
 
     Serial.println("Перезагрузка платы CPU...");
 
-    digitalWrite(GPIO_RESET2, HIGH);
+    digitalWrite(GPIO_RESET2, LOW);
     digitalWrite(GPIO_RESET1, HIGH);
 
     startDelay = millis();
@@ -219,7 +219,7 @@ void resetCPU() {
         handleYellowBlink();
     }
     
-    digitalWrite(GPIO_RESET1, LOW);
+    digitalWrite(GPIO_RESET1, HIGH);
 
     startDelay = millis();
     while (millis() - startDelay < 1000) {
