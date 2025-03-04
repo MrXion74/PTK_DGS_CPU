@@ -457,7 +457,7 @@ void testVoltagesAndCurrents() {
     float voltage5V = processChannel(ads1, readings5V, 5, (15100.0/5100.0), VOLTAGE_5V_LOWER, VOLTAGE_5V_UPPER, 4);
     float voltage26V = processChannel(ads1, readings26V, 5, (105100.0/5100.0), VOLTAGE_26V_LOWER, VOLTAGE_26V_UPPER, 5);
     float spwrVoltage = processChannel(ads2, readingsSPWR, 5, (15100.0/5100.0), SPWR_LOWER, SPWR_UPPER, 6);
-    float loopCurrentVoltage = processChannel(ads2, readingsLoopCurrent, 5, 10.0, LOOP_CURRENT_VOLTAGE_LOWER, LOOP_CURRENT_VOLTAGE_UPPER, 8);
+    float loopCurrentVoltage = processChannel(ads2, readingsLoopCurrent, 5, 20.0, LOOP_CURRENT_VOLTAGE_LOWER, LOOP_CURRENT_VOLTAGE_UPPER, 8);
     float vccCurrent = processChannel(ads2, readingsVCC, 5, 50.0, VCC_CURRENT_LOWER, VCC_CURRENT_UPPER, 7);
     
     //Вывод результатов
