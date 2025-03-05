@@ -121,7 +121,7 @@ void setup() {
     digitalWrite(LED_BLUE, LOW);
     digitalWrite(RS485_DIR_PIN, LOW);
     digitalWrite(GPIO_RESET1, HIGH);
-    digitalWrite(GPIO_RESET2, LOW);
+    digitalWrite(GPIO_RESET2, HIGH);
 
     Wire.begin(SDA_PIN, SCL_PIN);
 
@@ -205,8 +205,8 @@ void resetCPU() {
 
     Serial.println("Перезагрузка платы CPU...");
 
-    digitalWrite(GPIO_RESET2, LOW);
-    digitalWrite(GPIO_RESET1, HIGH);
+    digitalWrite(GPIO_RESET2, HIGH);
+    digitalWrite(GPIO_RESET1, LOW);
 
     startDelay = millis();
     while (millis() - startDelay < 500) {
