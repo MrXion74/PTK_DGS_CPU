@@ -19,8 +19,8 @@
 #define SCL_PIN 23 
 
 #define BUTTON_PIN 35 
-#define LED_RED 19 
-#define LED_GREEN 18
+#define LED_RED 18 
+#define LED_GREEN 19
 #define LED_BLUE 5
 
 #define RS485_DIR_PIN 25
@@ -131,11 +131,11 @@ void setup() {
     digitalWrite(HART_RTS_PIN, HIGH);
 
     if (!ads1.begin(0x48)) {
-        Serial.println("Ошибка инициализации ADS1.");
+        Serial.println("Ошибка инициализации DA2.");
         while (1);
     }
     if (!ads2.begin(0x49)) {
-        Serial.println("Ошибка инициализации ADS2.");
+        Serial.println("Ошибка инициализации DA1.");
         while (1);
     }
 }
