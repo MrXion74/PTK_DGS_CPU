@@ -73,7 +73,7 @@ enum SystemState {
     STATE_POWER_OFF,      // Питание выключено (белый светодиод)
     STATE_IDLE,           // Ожидание (мигает белый)
     STATE_TESTING,        // Тестирование (мигает желтый)
-    STATE_ERROR_DISPLAY,  // Отображение ошибок (коды ошибок и бирюзовый переход)
+    STATE_ERROR_DISPLAY,  // Отображение ошибок (горит красный)
     STATE_SUCCESS         // Все тесты успешно пройдены (зеленый светодиод)
 };
 
@@ -91,8 +91,7 @@ unsigned int pauseBlink = 200; // Продолжительность паузы
 // Флаги ошибок (true - ошибка)
 bool errors[] = {
     false, false, false, // RS485, STxRX, HART
-    false, false, false, // 3V3, 5V, 26V
-    false, false, false  // SPWR, VCC, loopCurrent
+    false, false, false // 3V3, 5V, SPWR
 };
 
 //*-----------------------------------------------------------------------
@@ -201,7 +200,6 @@ void resetCPU() {
     while (millis() - startDelay < 100) {
         handleYellowBlink();
     } 
-
 
     Serial.println("Перезагрузка платы CPU...");
 
@@ -455,11 +453,11 @@ void testVoltagesAndCurrents() {
     // Обработка каждого канала
     float voltage3V3 = processChannel(ads1, readings3V3, 5, (15100.0/5100.0), VOLTAGE_3V3_LOWER, VOLTAGE_3V3_UPPER, 3);
     float voltage5V = processChannel(ads1, readings5V, 5, (15100.0/5100.0), VOLTAGE_5V_LOWER, VOLTAGE_5V_UPPER, 4);
-    float voltage26V = processChannel(ads1, readings26V, 5, (105100.0/5100.0), VOLTAGE_26V_LOWER, VOLTAGE_26V_UPPER, 5);
-    float spwrVoltage = processChannel(ads2, readingsSPWR, 5, (15100.0/5100.0), SPWR_LOWER, SPWR_UPPER, 6);
+    float voltage26V = processChannel(ads1, readings26V, 5, (105100.0/5100.0), VOLTAGE_26V_LOWER, VOLTAGE_26V_UPPER, 6);
+    float spwrVoltage = processChannel(ads2, readingsSPWR, 5, (15100.0/5100.0), SPWR_LOWER, SPWR_UPPER, 5);
     float loopCurrentVoltage = processChannel(ads2, readingsLoopCurrent, 5, 20.0, LOOP_CURRENT_VOLTAGE_LOWER, LOOP_CURRENT_VOLTAGE_UPPER, 8);
     float vccCurrent = processChannel(ads2, readingsVCC, 5, 50.0, VCC_CURRENT_LOWER, VCC_CURRENT_UPPER, 7);
-    
+
     //Вывод результатов
     Serial.printf("VCC Current: %.2f mA\n", vccCurrent);
     Serial.printf("4-20mA Line Voltage: %.2f mA\n", loopCurrentVoltage);
@@ -468,19 +466,9 @@ void testVoltagesAndCurrents() {
     Serial.printf("5V Voltage: %.2f V\n", voltage5V);
     Serial.printf("26V Voltage: %.2f V\n", voltage26V);
 
-    if (vccCurrent < VCC_CURRENT_LOWER || vccCurrent > VCC_CURRENT_UPPER) {
-        Serial.println("Ошибка: ток VCC вне диапазона");
-        errors[7] = true;
-    }
-
-    if (loopCurrentVoltage < LOOP_CURRENT_VOLTAGE_LOWER || loopCurrentVoltage > LOOP_CURRENT_VOLTAGE_UPPER) {
-        Serial.println("Ошибка: ток в линии 4-20мА вне диапазона");
-        errors[8] = true;
-    }
-
     if (spwrVoltage < SPWR_LOWER || spwrVoltage > SPWR_UPPER) {
         Serial.println("Ошибка: напряжение SPWR вне диапазона");
-        errors[6] = true;
+        errors[5] = true;
     }
 
     if (voltage3V3 < VOLTAGE_3V3_LOWER || voltage3V3 > VOLTAGE_3V3_UPPER) {
@@ -491,11 +479,6 @@ void testVoltagesAndCurrents() {
     if (voltage5V < VOLTAGE_5V_LOWER || voltage5V > VOLTAGE_5V_UPPER) {
         Serial.println("Ошибка: напряжение 5V вне диапазона");
         errors[4] = true;
-    }
-
-    if (voltage26V < VOLTAGE_26V_LOWER || voltage26V > VOLTAGE_26V_UPPER) {
-        Serial.println("Ошибка: напряжение 26V вне диапазона");
-        errors[5] = true;
     }
 
     Serial.println("\n");
@@ -517,7 +500,7 @@ void runTests() {
     handleYellowBlink();
     currentState = STATE_TESTING;
 
-    for(int i=0; i<9; i++) errors[i] = false; //Сброс всех ошибок перед запуском тестов
+    for(int i=0; i<6; i++) errors[i] = false; //Сброс всех ошибок перед запуском тестов
     
     resetCPU();
     
@@ -548,17 +531,12 @@ void runTests() {
     }
 
     testVoltagesAndCurrents();
-    
-    startDelay = millis();
-    while (millis() - startDelay < 5000) {
-        handleYellowBlink();
-    }
 
     digitalWrite(GPIO_RESET2, HIGH);
 
     // Проверка наличия ошибок
     currentErrorIndex = -1;
-    for(int i = 0; i < 9; i++) {
+    for(int i = 0; i < 6; i++) {
         if(errors[i]) {
             currentErrorIndex = i;
             break;
@@ -567,7 +545,7 @@ void runTests() {
     
     // Переход в состояние успеха или отображения ошибок
     if (currentErrorIndex == -1) {
-        for(int i=0; i<9; i++) errors[i] = false;
+        for(int i=0; i<6; i++) errors[i] = false;
         currentState = STATE_SUCCESS;
     } else {
         currentState = STATE_ERROR_DISPLAY;
@@ -594,195 +572,20 @@ void handleButton() {
 
 //* Вывод ошибок
 void showErrors() {
-    static unsigned long lastErrorTime = 0;
-    static unsigned long lastTransitionTime = 0;
-    static bool showingError = true;
+    bool hasError = false;
 
-    if (showingError) {
-        switch (currentErrorIndex) {
-            case 0: //* RS485
-                digitalWrite(LED_RED, HIGH);
-                
-                delay(longBlink);
-                digitalWrite(LED_RED, LOW);
-
-                delay(pauseBlink);
-
-                digitalWrite(LED_RED, HIGH);
-                delay(shortBlink);
-                digitalWrite(LED_RED, LOW);
-
-                delay(pauseBlink);
-
-                digitalWrite(LED_RED, HIGH);
-                delay(longBlink);
-                digitalWrite(LED_RED, LOW);
-
-                delay(pauseBlink);
-
-                digitalWrite(LED_RED, HIGH);
-                delay(shortBlink);
-                digitalWrite(LED_RED, LOW);
-
-                delay(pauseBlink);
-
-                digitalWrite(LED_RED, HIGH);
-                delay(longBlink);
-                digitalWrite(LED_RED, LOW);
-
-                delay(pauseBlink);
-               
-                break;
-            case 1: //* STxRX
-                for (int i = 0; i < 3; i++) {
-                    digitalWrite(LED_RED, HIGH);
-                    delay(shortBlink);
-                    digitalWrite(LED_RED, LOW);
-                    delay(pauseBlink);
-                }
-
-                for (int i = 0; i < 2; i++) {
-                    digitalWrite(LED_RED, HIGH);
-                    delay(longBlink);
-                    digitalWrite(LED_RED, LOW);
-                    delay(pauseBlink);
-                }
-
-                break;
-            case 2: //* HART
-                digitalWrite(LED_RED, HIGH);
-                
-                delay(longBlink);
-
-                digitalWrite(LED_RED, LOW);
-                delay(pauseBlink);
-
-                for (int i = 0; i < 3; i++) {
-                    digitalWrite(LED_RED, HIGH);
-                    delay(shortBlink);
-                    digitalWrite(LED_RED, LOW);
-                    delay(pauseBlink);
-                }
-
-                digitalWrite(LED_RED, HIGH);
-                
-                delay(longBlink);
-
-                digitalWrite(LED_RED, LOW);
-                delay(pauseBlink);
-
-                break;
-            case 3: //* 3V3
-                for (int i = 0; i < 2; i++) {
-                    digitalWrite(LED_RED, HIGH);
-                    delay(shortBlink);
-                    digitalWrite(LED_RED, LOW);
-                    delay(pauseBlink);
-                }
-
-                for (int i = 0; i < 3; i++) {
-                    digitalWrite(LED_RED, HIGH);
-                    delay(longBlink);
-                    digitalWrite(LED_RED, LOW);
-                    delay(pauseBlink);
-                }
-
-                break;
-            case 4: //* 5V
-                for (int i = 0; i < 3; i++) {
-                    digitalWrite(LED_RED, HIGH);
-                    delay(longBlink);
-                    digitalWrite(LED_RED, LOW);
-                    delay(pauseBlink);
-                }
-
-                for (int i = 0; i < 2; i++) {
-                    digitalWrite(LED_RED, HIGH);
-                    delay(shortBlink);
-                    digitalWrite(LED_RED, LOW);
-                    delay(pauseBlink);
-                }
-
-                break;
-            case 5: //* 26V
-                digitalWrite(LED_RED, HIGH);
-                delay(shortBlink);
-                digitalWrite(LED_RED, LOW);
-                delay(pauseBlink);
-
-                for (int i = 0; i < 3; i++) {
-                    digitalWrite(LED_RED, HIGH);
-                    delay(longBlink);
-                    digitalWrite(LED_RED, LOW);
-                    delay(pauseBlink);
-                }
-
-                digitalWrite(LED_RED, HIGH);
-                delay(shortBlink);
-                digitalWrite(LED_RED, LOW);
-                delay(pauseBlink);
-
-                break;
-            case 6: //* SPWR
-                for (int i = 0; i < 5; i++) {
-                    digitalWrite(LED_RED, HIGH);
-                    delay(longBlink);
-                    digitalWrite(LED_RED, LOW);
-                    delay(pauseBlink);
-                }
-
-                break;
-            case 7: //* VCC
-                for (int i = 0; i < 5; i++) {
-                    digitalWrite(LED_RED, HIGH);
-                    delay(shortBlink);
-                    digitalWrite(LED_RED, LOW);
-                    delay(pauseBlink);
-                }
-                break;
-            case 8: //* loopCurrent
-                digitalWrite(LED_RED, HIGH);
-                delay(shortBlink);
-                digitalWrite(LED_RED, LOW);
-                delay(pauseBlink);
-
-                digitalWrite(LED_RED, HIGH);
-                delay(longBlink);
-                digitalWrite(LED_RED, LOW);
-                delay(pauseBlink);
-
-                digitalWrite(LED_RED, HIGH);
-                delay(shortBlink);
-                digitalWrite(LED_RED, LOW);
-                delay(pauseBlink);
-
-                digitalWrite(LED_RED, HIGH);
-                delay(longBlink);
-                digitalWrite(LED_RED, LOW);
-                delay(pauseBlink);
-
-                digitalWrite(LED_RED, HIGH);
-                delay(shortBlink);
-                digitalWrite(LED_RED, LOW);
-                delay(pauseBlink);
+    for (int i = 0; i < 6; i++) {
+        if (errors[i]) {
+            hasError = true;
+            break;
         }
-
-        do {
-            currentErrorIndex = (currentErrorIndex + 1) % 9;
-        } while(!errors[currentErrorIndex] && currentErrorIndex != -1);
-
-        showingError = false;
-    } else {
-        // Бирюзовый переход
-        delay(500);
-        digitalWrite(LED_GREEN, HIGH);
-        digitalWrite(LED_BLUE, HIGH);
-        delay(1000);
-        digitalWrite(LED_GREEN, LOW);
-        digitalWrite(LED_BLUE, LOW);
-        delay(500);
-        showingError = true;
     }
+
+    if (hasError) {
+        digitalWrite(LED_RED, HIGH);
+        delay(5000);
+        digitalWrite(LED_RED, LOW);
+    } 
 }
 
 //* Основной цикл
@@ -802,7 +605,10 @@ void loop() {
             break;
             
         case STATE_ERROR_DISPLAY:
-            showErrors();
+            digitalWrite(LED_RED, HIGH);
+            delay(10000);
+            currentState = STATE_IDLE;
+            //showErrors();
             break;
             
         case STATE_SUCCESS:
