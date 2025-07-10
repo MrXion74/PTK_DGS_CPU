@@ -40,7 +40,7 @@
 
 //* Диапазоны измерений
 #define VCC_CURRENT_LOWER 20
-#define VCC_CURRENT_UPPER 55
+#define VCC_CURRENT_UPPER 65
 
 #define LOOP_CURRENT_VOLTAGE_LOWER 1 
 #define LOOP_CURRENT_VOLTAGE_UPPER 18
