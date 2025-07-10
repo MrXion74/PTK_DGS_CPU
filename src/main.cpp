@@ -61,6 +61,7 @@ Adafruit_ADS1115 ads1;
 Adafruit_ADS1115 ads2; 
 HardwareSerial rs485(1);
 HardwareSerial hartSerial(2);
+HardwareSerial stxrxSerial(2); //! Аппаратный UART на SD2 и SD3
 
 int16_t readings3V3[5];
 int16_t readings5V[5];
@@ -102,7 +103,8 @@ void setup() {
     Serial.begin(115200);
     rs485.begin(9600, SERIAL_8N1, RS485_RX_PIN, RS485_TX_PIN);
     hartSerial.begin(HART_BAUDRATE, SERIAL_8O1, HART_RX_PIN, HART_TX_PIN);
-    
+    stxrxSerial.begin(115200, SERIAL_8N1, 9, 10); //! SD2 = RX, SD3 = TX
+
     pinMode(RS485_DIR_PIN, OUTPUT);
 
     pinMode(BUTTON_PIN, INPUT);
@@ -275,6 +277,38 @@ void testRS485() {
 }
 
 //* Тест STxRx
+/* //!Аппаратный UART
+void testSTxRx() {
+    Serial.println("\nТест STxRx по UART...");
+
+    const char* testMessage = "STXRX_TEST\r\n";
+    String response = "";
+
+    stxrxSerial.flush();
+    while (stxrxSerial.available()) stxrxSerial.read(); 
+
+    stxrxSerial.print(testMessage);
+
+    unsigned long startTime = millis();
+    while (millis() - startTime < 1000) {
+        handleYellowBlink();
+        if (stxrxSerial.available()) {
+            char c = stxrxSerial.read();
+            response += c;
+        }
+    }
+
+    if (response.length() > 0) {
+        Serial.print("STxRx ответ: ");
+        Serial.println(response);
+    } else {
+        Serial.println("Ошибка: STxRx не отвечает");
+        errors[1] = true;
+    }
+}
+*/
+
+//!Изначальный тест
 void testSTxRx() {
 
     handleYellowBlink();
@@ -466,6 +500,16 @@ void testVoltagesAndCurrents() {
     Serial.printf("5V Voltage: %.2f V\n", voltage5V);
     Serial.printf("26V Voltage: %.2f V\n", voltage26V);
 
+    //Не влияет на результат тестирования
+    if (vccCurrent < VCC_CURRENT_LOWER || vccCurrent > VCC_CURRENT_UPPER) {
+        Serial.println("Ошибка: ток VCC вне диапазона");
+    }
+
+    //Не влияет на результат тестирования
+    if (loopCurrentVoltage < LOOP_CURRENT_VOLTAGE_LOWER || loopCurrentVoltage > LOOP_CURRENT_VOLTAGE_UPPER) {
+        Serial.println("Ошибка: ток в линии 4-20мА вне диапазона");
+    }
+
     if (spwrVoltage < SPWR_LOWER || spwrVoltage > SPWR_UPPER) {
         Serial.println("Ошибка: напряжение SPWR вне диапазона");
         errors[5] = true;
@@ -479,6 +523,11 @@ void testVoltagesAndCurrents() {
     if (voltage5V < VOLTAGE_5V_LOWER || voltage5V > VOLTAGE_5V_UPPER) {
         Serial.println("Ошибка: напряжение 5V вне диапазона");
         errors[4] = true;
+    }
+
+    //Не влияет на результат тестирования
+    if (voltage26V < VOLTAGE_26V_LOWER || voltage26V > VOLTAGE_26V_UPPER) {
+        Serial.println("Ошибка: напряжение 26V вне диапазона");
     }
 
     Serial.println("\n");
@@ -495,9 +544,31 @@ void testVoltagesAndCurrents() {
     }
 }
 
+//* Проверка извлечена ли плата
+bool isBoardRemoved() {
+    int16_t samples[5];
+    for (int i = 0; i < 5; i++) {
+        samples[i] = ads2.readADC_SingleEnded(2);
+        delay(10); 
+    }
+
+    int sum = 0;
+    for (int i = 0; i < 5; i++) sum += samples[i];
+    float average = sum / 5.0;
+    float current = ads2.computeVolts(average) * 50.0; 
+    return current < 10.0;
+}
+
 //* Последовательность тестов
 void runTests() {
     handleYellowBlink();
+
+    // Проверка: подключена ли плата
+    if (isBoardRemoved()) {
+        Serial.println("Ошибка: плата не подключена. Тестирование не запущено.");
+        return;
+    }
+
     currentState = STATE_TESTING;
 
     for(int i=0; i<6; i++) errors[i] = false; //Сброс всех ошибок перед запуском тестов
@@ -606,7 +677,11 @@ void loop() {
             
         case STATE_ERROR_DISPLAY:
             digitalWrite(LED_RED, HIGH);
-            delay(10000);
+            while (!isBoardRemoved()) {
+                delay(100);
+            }
+            Serial.println("Плата извлечена. Переход в режим ожидания.");
+            digitalWrite(LED_RED, LOW);
             currentState = STATE_IDLE;
             //showErrors();
             break;
@@ -614,7 +689,11 @@ void loop() {
         case STATE_SUCCESS:
             Serial.println("Все тесты успешно пройдены");
             digitalWrite(LED_GREEN, HIGH);
-            delay(10000);
+            while (!isBoardRemoved()) {
+                delay(100);
+            }
+            Serial.println("Плата извлечена. Переход в режим ожидания.");
+            digitalWrite(LED_GREEN, LOW);
             currentState = STATE_IDLE;
             break;
     }
