@@ -1,7 +1,7 @@
 /*
  * ПТК ДГС
  * Тестирование плат CPU
- */ 
+ */
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -61,7 +61,7 @@ Adafruit_ADS1115 ads1;
 Adafruit_ADS1115 ads2; 
 HardwareSerial rs485(1);
 HardwareSerial hartSerial(2);
-HardwareSerial stxrxSerial(2); //! Аппаратный UART на SD2 и SD3
+//HardwareSerial stxrxSerial(2); //! Аппаратный UART на SD2 и SD3
 
 int16_t readings3V3[5];
 int16_t readings5V[5];
@@ -103,7 +103,7 @@ void setup() {
     Serial.begin(115200);
     rs485.begin(9600, SERIAL_8N1, RS485_RX_PIN, RS485_TX_PIN);
     hartSerial.begin(HART_BAUDRATE, SERIAL_8O1, HART_RX_PIN, HART_TX_PIN);
-    stxrxSerial.begin(115200, SERIAL_8N1, 9, 10); //! SD2 = RX, SD3 = TX
+    //stxrxSerial.begin(115200, SERIAL_8N1, 9, 10); //! SD2 = RX, SD3 = TX
 
     pinMode(RS485_DIR_PIN, OUTPUT);
 
@@ -573,6 +573,13 @@ void runTests() {
 
     for(int i=0; i<6; i++) errors[i] = false; //Сброс всех ошибок перед запуском тестов
     
+    digitalWrite(LED_RED, LOW);
+    digitalWrite(LED_GREEN, LOW);
+    digitalWrite(LED_BLUE, LOW);
+
+    blinkStateY = false;
+    blinkStateW = false;
+
     resetCPU();
     
     unsigned long startDelay = millis();
@@ -602,6 +609,13 @@ void runTests() {
     }
 
     testVoltagesAndCurrents();
+
+    digitalWrite(LED_RED, LOW);
+    digitalWrite(LED_GREEN, LOW);
+    digitalWrite(LED_BLUE, LOW);
+
+    blinkStateY = false;
+    blinkStateW = false;
 
     digitalWrite(GPIO_RESET2, HIGH);
 
@@ -642,6 +656,7 @@ void handleButton() {
 }
 
 //* Вывод ошибок
+/*
 void showErrors() {
     bool hasError = false;
 
@@ -658,6 +673,7 @@ void showErrors() {
         digitalWrite(LED_RED, LOW);
     } 
 }
+*/
 
 //* Основной цикл
 void loop() {
